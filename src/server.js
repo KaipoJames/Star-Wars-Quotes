@@ -1,16 +1,21 @@
 const MongoClient = require("mongodb").MongoClient;
 const bodyParser = require("body-parser");
 const express = require("express");
+const path = require("path");
 const app = express();
 const connectionString = "mongodb+srv://Yoda:TheForce@cluster0.ndnfb.mongodb.net/test?retryWrites=true&w=majority";
+
+app.set('views', './views');
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
 
 const main = {
     init() {
         this.createServer();
         this.getFormData();
         this.connectToMongo();
-        this.getIndex();
-        this.createQuote();
+        //this.getIndex();
+        //this.createQuote();
     },
 
     createServer() {
@@ -23,24 +28,37 @@ const main = {
         app.use(bodyParser.urlencoded({ extended:true }));
     },
     // This method returns the home page of our app(index.html)
-    getIndex() {
+    getIndex(db) {
         app.get("/", (req, res) => {
-            //res.send("This text is sent by the server back to this browser :)");
-            res.sendFile(__dirname + "/index.html");
-        });
+            //res.sendFile(__dirname + "/index.html");
+            db.collection("quotes").find().toArray()
+            .then(results => {
+                res.render("index", { quotes: results });
+            })
+            .catch(error => console.error(error))
+        })
     },
-    createQuote() {
+    createQuote(collection) {
         app.post("/quotes", (req, res) => {
-            res.send("Created The Quote!");
-            console.log(req.body);
+            collection.insertOne(req.body)
+                .then(result => {
+                    res.redirect("/");
+                })
+                .catch(error => console.error(error));
         });
     },
     connectToMongo() {
-        MongoClient.connect(connectionString, { useUnifiedTopology: true } ,(err, client) => {
-            if (err) return console.error(err);
-            console.log("Connected To Database!");
-            const db = client.db('star-wars-quotes')
-        });
+        MongoClient.connect(connectionString, { useUnifiedTopology: true } )
+            .then(client => {
+                console.log("Connected To Database!");
+                const db = client.db('star-wars');
+                const quotesCollection = db.collection("quotes");
+                this.createQuote(quotesCollection);
+                this.getIndex(db);
+
+            })
+            .catch(console.error);
+        
     }
 
 }
