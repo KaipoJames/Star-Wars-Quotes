@@ -5,9 +5,11 @@ const path = require("path");
 const app = express();
 const connectionString = "mongodb+srv://Yoda:TheForce@cluster0.ndnfb.mongodb.net/test?retryWrites=true&w=majority";
 
-app.set('views', './views');
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+//Make the public folder accessible(public)
+app.use(express.static('public'))
 
 const main = {
     init() {
@@ -27,6 +29,21 @@ const main = {
     getFormData() {
         app.use(bodyParser.urlencoded({ extended:true }));
     },
+    connectToMongo() {
+        MongoClient.connect(connectionString, { useUnifiedTopology: true } )
+            .then(client => {
+                console.log("Connected To Database!");
+                const db = client.db('star-wars');
+                const quotesCollection = db.collection("quotes");
+                this.createQuote(quotesCollection);
+                this.getIndex(db);
+
+            })
+            .catch(console.error);
+        
+    },
+
+
     // This method returns the home page of our app(index.html)
     getIndex(db) {
         app.get("/", (req, res) => {
@@ -47,19 +64,6 @@ const main = {
                 .catch(error => console.error(error));
         });
     },
-    connectToMongo() {
-        MongoClient.connect(connectionString, { useUnifiedTopology: true } )
-            .then(client => {
-                console.log("Connected To Database!");
-                const db = client.db('star-wars');
-                const quotesCollection = db.collection("quotes");
-                this.createQuote(quotesCollection);
-                this.getIndex(db);
-
-            })
-            .catch(console.error);
-        
-    }
 
 }
 
